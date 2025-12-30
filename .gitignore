@@ -1,0 +1,6 @@
+.vscode/
+/builds/
+/build-*/
+/out/
+/cmake-build-*/
+/CMakeFiles/
