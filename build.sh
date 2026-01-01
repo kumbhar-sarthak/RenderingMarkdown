@@ -1,9 +1,13 @@
 #!/bin/bash
 set -e
 
+if [ ! -d "builds" ]; then
+    mkdir builds
+fi
+
 cd "$(dirname "$0")/builds"
 
-printf "\nBuilding Markdown Engine...\n\n"
+printf "\nCompiling Project...\n\n"
 
 cmake -S ..
 

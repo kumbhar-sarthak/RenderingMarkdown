@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <filesystem>
+#include <atomic>
 #include "lexer.h"
 #include "parser.h"
 
@@ -17,143 +18,17 @@ struct FileContent
 
 class Manager
 {
+    std::atomic<int> i{0};
     std::string css()
     {
-        return R"(
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            line-height: 1.6;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            color: #333;
-            background-color: #fff;
+        std::ifstream cssFile("utils/formatting.css");
+        if (!cssFile.is_open())
+        {
+            return "/* Could not load CSS file */";
         }
-        
-        h1, h2, h3, h4, h5, h6 {
-            margin-top: 24px;
-            margin-bottom: 16px;
-            font-weight: 600;
-            line-height: 1.25;
-        }
-        
-        h1 {
-            font-size: 2em;
-            border-bottom: 1px solid #eaecef;
-            padding-bottom: 0.3em;
-        }
-        
-        h2 {
-            font-size: 1.5em;
-            border-bottom: 1px solid #eaecef;
-            padding-bottom: 0.3em;
-        }
-        
-        h3 { font-size: 1.25em; }
-        h4 { font-size: 1em; }
-        h5 { font-size: 0.875em; }
-        h6 { font-size: 0.85em; color: #6a737d; }
-        
-        p {
-            margin-top: 0;
-            margin-bottom: 16px;
-        }
-        
-        a {
-            color: #0366d6;
-            text-decoration: none;
-        }
-        
-        a:hover {
-            text-decoration: underline;
-        }
-        
-        strong {
-            font-weight: 600;
-        }
-        
-        em {
-            font-style: italic;
-        }
-        
-        code {
-            padding: .2em .4em;
-            margin: 0;
-            font-size: 85%;
-            white-space: break-spaces;
-            background-color: #818b981f;
-            border-radius: 6px;
-        }
-        
-        pre {
-            padding: 16px;
-            overflow: auto;
-            font-size: 85%;
-            line-height: 1.45;
-            background-color: #f6f8fa;
-            border-radius: 6px;
-            margin-bottom: 16px;
-        }
-        
-        pre code {
-            display: inline;
-            padding: 0;
-            margin: 0;
-            overflow: visible;
-            line-height: inherit;
-            background-color: transparent;
-            border: 0;
-        }
-        
-        ul, ol {
-            padding-left: 2em;
-            margin-top: 0;
-            margin-bottom: 16px;
-        }
-        
-        li {
-            margin-bottom: 0.25em;
-        }
-        
-        li > p {
-            margin-top: 16px;
-        }
-        
-        hr {
-            height: 0.25em;
-            padding: 0;
-            margin: 24px 0;
-            background-color: #e1e4e8;
-            border: 0;
-        }
-        
-        blockquote {
-            padding: 0 1em;
-            color: #6a737d;
-            border-left: 0.25em solid #dfe2e5;
-            margin: 0 0 16px 0;
-        }
-        
-        table {
-            border-spacing: 0;
-            border-collapse: collapse;
-            margin-bottom: 16px;
-        }
-        
-        table th, table td {
-            padding: 6px 13px;
-            border: 1px solid #dfe2e5;
-        }
-        
-        table tr {
-            background-color: #fff;
-            border-top: 1px solid #c6cbd1;
-        }
-        
-        table tr:nth-child(2n) {
-            background-color: #f6f8fa;
-        }
-    )";
+        std::stringstream buffer;
+        buffer << cssFile.rdbuf();
+        return buffer.str();
     }
 
     std::string fileSize(const FileContent &fileContent) {
@@ -169,7 +44,7 @@ class Manager
         return std::to_string(size) + " " + units[unitIndex];
     }
 
-    FileContent readFile(const std::string &filename)
+    [[nodiscard]] FileContent readFile(const std::string &filename)
     {
         FileContent result;
         result.success = false;
@@ -273,11 +148,6 @@ class Manager
         }
     }
 
-    void printParser(const std::string &output)
-    {
-        std::cout << output << std::endl;
-    }
-
     void writeToFile(const std::string &filename, const std::string &content)
     {
         std::filesystem::path filePath = std::filesystem::absolute(filename);
@@ -297,7 +167,18 @@ public:
     Manager() = default;
     ~Manager() = default;
 
-    void ProcessFile(const std::string &filename, int i)
+    Manager(const Manager& other) = delete;
+
+    Manager& operator=(const Manager& other) = delete;
+
+    Manager(Manager&& other) noexcept = default;
+
+    Manager& operator=(Manager&& other) noexcept {
+        if (this != &other) {}
+        return *this;
+    };
+
+    void ProcessFile(const std::string &filename)
     {
         std::cout << "Thread " << std::this_thread::get_id()
                   << ": Processing file: " << filename << "\n";
@@ -329,8 +210,8 @@ public:
         output += html;
         output += "</body>\n</html>\n";
 
-        std::string outputfile = "tests/result";
-        outputfile += std::to_string(i);
+        std::string outputfile = "target/result";
+        outputfile += std::to_string(++i);
         outputfile += ".html";
 
         writeToFile(outputfile, output);
@@ -350,12 +231,12 @@ main(int argc, char *argv[])
     std::cout << "Markdown Parser - Processing " << (argc - 1) << " file(s)\n";
     std::cout << "Main thread: " << std::this_thread::get_id() << "\n\n";
 
-    Manager manage;
+    auto shareManager = std::make_shared<Manager>();
     std::vector<std::thread> threads;
 
     for (int i = 1; i < argc; ++i)
     {
-        threads.emplace_back(&Manager::ProcessFile, &manage, argv[i], i);
+        threads.emplace_back(&Manager::ProcessFile, shareManager, argv[i]);
     }
 
     for (auto &thread : threads)
