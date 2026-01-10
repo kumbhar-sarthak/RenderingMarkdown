@@ -31,12 +31,14 @@ class Manager
         return buffer.str();
     }
 
-    std::string fileSize(const FileContent &fileContent) {
-        const char* units[] = {"B", "KB", "MB", "GB", "TB"};
+    std::string fileSize(const FileContent &fileContent)
+    {
+        const char *units[] = {"B", "KB", "MB", "GB", "TB"};
         size_t size = fileContent.content.size();
         int unitIndex = 0;
 
-        while (size >= 1024 && unitIndex < 4) {
+        while (size >= 1024 && unitIndex < 4)
+        {
             size /= 1024;
             ++unitIndex;
         }
@@ -167,22 +169,22 @@ public:
     Manager() = default;
     ~Manager() = default;
 
-    Manager(const Manager& other) = delete;
+    Manager(const Manager &other) = delete;
 
-    Manager& operator=(const Manager& other) = delete;
+    Manager &operator=(const Manager &other) = delete;
 
-    Manager(Manager&& other) noexcept = default;
+    Manager(Manager &&other) noexcept = default;
 
-    Manager& operator=(Manager&& other) noexcept {
-        if (this != &other) {}
+    Manager &operator=(Manager &&other) noexcept
+    {
+        if (this != &other)
+        {
+        }
         return *this;
     };
 
     void ProcessFile(const std::string &filename)
     {
-        std::cout << "Thread " << std::this_thread::get_id()
-                  << ": Processing file: " << filename << "\n";
-
         FileContent fileContent = readFile(filename);
 
         if (!fileContent.success)
@@ -192,8 +194,8 @@ public:
             return;
         }
 
-        std::cout << "Thread " << std::this_thread::get_id()
-                  << ": File size: " << fileSize(fileContent) << "\n";
+        std::cout << ": Processing file: " << std::filesystem::path(filename).filename().string()
+                  << ", size: " << fileSize(fileContent) << "\n";
 
         Lexer lexer;
         std::vector<Token> tokens = lexer.Tokenize(fileContent.content);
@@ -218,8 +220,7 @@ public:
     }
 };
 
-int
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     if (argc < 2)
     {
