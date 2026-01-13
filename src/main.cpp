@@ -1,13 +1,13 @@
 #include <iostream>
 #include <fstream>
 #include <string>
-#include <thread>
 #include <vector>
 #include <memory>
 #include <filesystem>
 #include <atomic>
 #include "lexer.h"
 #include "parser.h"
+#include "parallel.h"
 
 struct FileContent
 {
@@ -194,7 +194,8 @@ public:
             return;
         }
 
-        std::cout << ": Processing file: " << std::filesystem::path(filename).filename().string()
+        std::cout << "TID:" << std::this_thread::get_id()
+                  << " Processing file: " << std::filesystem::path(filename).filename().string()
                   << ", size: " << fileSize(fileContent) << "\n";
 
         Lexer lexer;
@@ -203,6 +204,7 @@ public:
         Parser parser;
         std::string html = parser.Parse(tokens);
 
+        // avoid file I/O
         std::string output = "<!DOCTYPE html>\n";
         output += "<html>\n<head>\n";
         output += "<meta charset=\"UTF-8\">\n";
@@ -233,16 +235,13 @@ int main(int argc, char *argv[])
     std::cout << "Main thread: " << std::this_thread::get_id() << "\n\n";
 
     auto shareManager = std::make_shared<Manager>();
-    std::vector<std::thread> threads;
+    ThreadPool pool; // adjust count as you require
 
     for (int i = 1; i < argc; ++i)
     {
-        threads.emplace_back(&Manager::ProcessFile, shareManager, argv[i]);
-    }
-
-    for (auto &thread : threads)
-    {
-        thread.join();
+        // capture manager
+        pool.enqueue([shareManager, filename = argv[i]]
+                     { shareManager->ProcessFile(filename); });
     }
 
     std::cout << "\nAll files processed successfully.\n";

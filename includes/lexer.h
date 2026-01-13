@@ -1,7 +1,6 @@
 /*
   * lexer.h
   *
-  *  Created on: Mar 15, 2024
 */
 
 #ifndef LEXER_H

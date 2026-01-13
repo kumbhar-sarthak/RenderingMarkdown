@@ -15,6 +15,7 @@ set(SOURCES
     src/definition/horizontalline_rule.cc
     src/lexer.cpp
     src/parser.cpp
+    src/parallel.cpp
     src/main.cpp
 )
 
